@@ -2,11 +2,22 @@ import streamlit as st
 from supabase import create_client
 import requests
 
-# 1. 頁面基本設定
+# 1. 頁面基本設定與手機 PWA 支援
 st.set_page_config(
     page_title="大自然觀察筆記",
     page_icon="🌿",
     layout="centered"
+)
+
+# 注入 PWA 網頁圖示與標題設定（讓手機加入主畫面時更像原生 App）
+st.markdown(
+    """
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4CAF50">
+    <link rel="icon" href="https://img.icons8.com/color/96/sprout.png">
+    """,
+    unsafe_allow_html=True
 )
 
 st.title("🌿 大自然隨身觀察筆記")
@@ -112,6 +123,6 @@ try:
                     st.markdown(f"**備註：** {item.get('notes')}")
                 st.caption(f"記錄時間編號 ID: {item.get('id')}")
     else:
-        st.info("目前還沒有任何歷史紀錄，趕快上傳第一張照片吧！")
+        st.info("目前還沒有已經儲存的歷史紀錄！")
 except Exception as e:
     st.warning(f"目前無法讀取歷史紀錄：{e}")
