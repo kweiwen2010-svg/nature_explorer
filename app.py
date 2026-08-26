@@ -100,7 +100,7 @@ if uploaded_file is not None:
         if result_text and "錯誤" not in result_text and "失敗" not in result_text:
             with st.spinner("正在將紀錄與小知識儲存到雲端資料庫..."):
                 try:
-                    supabase.table("observations").insert({"category": category, "result_text": result_text}).execute()
+                    supabase.table("observations").insert({"category": category, "result_name": result_text}).execute()
                     st.success("✅ 辨識完成並已成功儲存到雲端！")
                     st.info(result_text)
                 except Exception as e:
@@ -126,7 +126,7 @@ try:
     if history_data:
         for item in history_data:
             st.markdown(f"**分類：** {item.get('category', '未分類')}")
-            st.markdown(f"**辨識結果：** {item.get('result_text', '無結果')}")
+            st.markdown(f"**辨識結果：** {item.get('result_name', '無結果')}")
             st.caption(f"記錄編號 ID: {item.get('id', 'N/A')}")
             st.markdown("---")
     else:
