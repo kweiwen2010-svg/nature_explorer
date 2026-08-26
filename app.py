@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 from supabase import create_client
 import google.generativeai as genai
-from PIL import Image
+from PIL import Image, ImageOps
 
 # 網頁基礎設定
 st.set_page_config(page_title="大自然隨身觀察筆記", page_icon="🌿")
@@ -32,8 +32,12 @@ category = st.radio("選擇你要記錄的種類：", ["植物", "鳥類", "岩�
 uploaded_file = st.file_uploader("選擇或拍攝一張大自然照片", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # 顯示上傳的圖片
-    st.image(uploaded_file, caption="上傳的圖片", use_container_width=True)
+    # 自動將手機上傳旋轉過的照片轉正
+    image = Image.open(uploaded_file)
+    image = ImageOps.exif_transpose(image)
+    
+    # 顯示轉正後的圖片
+    st.image(image, caption="上傳的圖片", use_container_width=True)
     
     if st.button("🚀 開始辨識並上傳紀錄"):
         result_text = ""
@@ -42,8 +46,14 @@ if uploaded_file is not None:
         if category == "植物":
             with st.spinner("PlantNet 正在努力辨識這株植物..."):
                 api_endpoint = f"https://my-api.plantnet.org/v2/identify/all?api-key={plantnet_api_key}"
-                image_data = uploaded_file.getvalue()
-                files = [('images', (uploaded_file.name, image_data))]
+                
+                # 為了傳送給 PlantNet API，我們將轉正後的 image 暫存成位元組
+                import io
+                img_byte_arr = io.BytesIO()
+                image.save(img_byte_arr, format='JPEG')
+                img_byte_arr = img_byte_arr.getvalue()
+                
+                files = [('images', ('uploaded_image.jpg', img_byte_arr))]
                 
                 try:
                     req = requests.post(api_endpoint, files=files)
@@ -54,15 +64,12 @@ if uploaded_file is not None:
                         species_name = best_match['species']['scientificNameWithoutAuthor']
                         score = best_match['score'] * 100
                         
-                        # 先記錄學名和準確度
                         initial_result = f"{species_name} [準確度: {score:.1f}%]"
                         
-                        # 呼叫 Gemini 補充小知識
                         with st.spinner("Gemini 正在為這株植物撰寫簡介..."):
                             intro_prompt = f"這是一種植物，學名是 {species_name}。請用繁體中文簡單介紹它的特徵或用途（50字以內）。"
                             summary_response = model.generate_content(intro_prompt)
                             
-                        # 把 PlantNet 結果跟 Gemini 介紹組裝起來
                         result_text = f"{initial_result}\n\n💡 **簡介：**\n{summary_response.text}"
                     else:
                         result_text = "植物辨識失敗，找不到相符的植物，請嘗試其他照片。"
@@ -73,9 +80,8 @@ if uploaded_file is not None:
         elif category == "鳥類":
             with st.spinner("Gemini AI 正在努力辨識這隻鳥..."):
                 try:
-                    img_for_gemini = Image.open(uploaded_file)
                     prompt = "請幫我辨識這張圖片裡的是什麼鳥類？請給我牠的中文俗名，並用繁體中文簡單介紹一下牠的特徵（50字以內）。"
-                    response = model.generate_content([prompt, img_for_gemini])
+                    response = model.generate_content([prompt, image])
                     result_text = response.text
                 except Exception as e:
                     result_text = f"鳥類辨識發生錯誤：{e}"
@@ -84,9 +90,8 @@ if uploaded_file is not None:
         elif category == "岩石":
             with st.spinner("Gemini AI 正在努力辨識這顆岩石..."):
                 try:
-                    img_for_gemini = Image.open(uploaded_file)
-                    prompt = "請幫我辨識這張圖片裡的是什麼岩石或礦物？請給我它的中文名稱，並用繁體中文簡單介紹一下它的特徵（50字以內）。"
-                    response = model.generate_content([prompt, img_for_gemini])
+                    prompt = "請幫我辨識這張圖片裡的是什麼岩石或礦物？請給我它的中文名稱，並用繁體中文簡單介紹它的特徵（50字以內）。"
+                    response = model.generate_content([prompt, image])
                     result_text = response.text
                 except Exception as e:
                     result_text = f"岩石辨識發生錯誤：{e}"
@@ -97,7 +102,7 @@ if uploaded_file is not None:
                 try:
                     supabase.table("observations").insert({"category": category, "result_text": result_text}).execute()
                     st.success("✅ 辨識完成並已成功儲存到雲端！")
-                    st.info(result_text) # 顯示給使用者看
+                    st.info(result_text)
                 except Exception as e:
                     st.error(f"資料庫儲存失敗：{e}")
         else:
@@ -111,7 +116,6 @@ st.header("📜 歷史觀察紀錄")
 if st.button("🔄 重新載入歷史紀錄"):
     st.cache_data.clear()
 
-# 抓取最近 10 筆資料
 @st.cache_data(ttl=60)
 def load_history():
     response = supabase.table("observations").select("*").order("id", desc=True).limit(10).execute()
