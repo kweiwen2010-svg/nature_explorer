@@ -24,7 +24,7 @@ supabase = init_supabase()
 
 # 初始化 Gemini AI
 genai.configure(api_key=gemini_api_key)
-model = genai.GenerativeModel('gemini-1.5-pro')
+model = genai.GenerativeModel('gemini-3.6')
 
 
 # ================= 2. 上傳與辨識區塊 =================
