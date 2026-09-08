@@ -11,7 +11,7 @@ st.title("🌿 大自然隨身觀察筆記")
 st.write("拍下你的植物、鳥類或岩石，讓 AI 幫你辨識並永久記錄到雲端！")
 
 # ================= 1. 讀取金鑰與連線設定 =================
-plantnet_api_key = st.secrets["PLANTNET_API_KEY"]
+# 註：如果之後完全不用 PlantNet，也可以把 secrets 裡的 PLANTNET_API_KEY 移除
 gemini_api_key = st.secrets["GEMINI_API_KEY"]
 supabase_url = st.secrets["SUPABASE_URL"]
 supabase_key = st.secrets["SUPABASE_KEY"]
@@ -24,7 +24,7 @@ supabase = init_supabase()
 
 # 初始化 Gemini AI
 genai.configure(api_key=gemini_api_key)
-model = genai.GenerativeModel('gemini-3.6-flash')
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 
 # ================= 2. 上傳與辨識區塊 =================
@@ -42,37 +42,13 @@ if uploaded_file is not None:
     if st.button("🚀 開始辨識並上傳紀錄"):
         result_text = ""
         
-        # --- (A) 植物辨識 (PlantNet 查學名 + Gemini 寫簡介) ---
+        # --- (A) 植物辨識 (改由 Gemini 處理) ---
         if category == "植物":
-            with st.spinner("PlantNet 正在努力辨識這株植物..."):
-                api_endpoint = f"https://my-api.plantnet.org/v2/identify/all?api-key={plantnet_api_key}"
-                
-                # 為了傳送給 PlantNet API，我們將轉正後的 image 暫存成位元組
-                import io
-                img_byte_arr = io.BytesIO()
-                image.save(img_byte_arr, format='JPEG')
-                img_byte_arr = img_byte_arr.getvalue()
-                
-                files = [('images', ('uploaded_image.jpg', img_byte_arr))]
-                
+            with st.spinner("Gemini AI 正在努力辨識這株植物..."):
                 try:
-                    req = requests.post(api_endpoint, files=files)
-                    json_result = req.json()
-                    
-                    if 'results' in json_result and len(json_result['results']) > 0:
-                        best_match = json_result['results'][0]
-                        species_name = best_match['species']['scientificNameWithoutAuthor']
-                        score = best_match['score'] * 100
-                        
-                        initial_result = f"{species_name} [準確度: {score:.1f}%]"
-                        
-                        with st.spinner("Gemini 正在為這株植物撰寫簡介..."):
-                            intro_prompt = f"這是一種植物，學名是 {species_name}。請用繁體中文簡單介紹它的特徵或用途（50字以內）。"
-                            summary_response = model.generate_content(intro_prompt)
-                            
-                        result_text = f"{initial_result}\n\n💡 **簡介：**\n{summary_response.text}"
-                    else:
-                        result_text = "植物辨識失敗，找不到相符的植物，請嘗試其他照片。"
+                    prompt = "請幫我辨識這張圖片裡的是什麼植物？請給我它的中文名稱或學名，並用繁體中文簡單介紹它的特徵或用途（50字以內）。"
+                    response = model.generate_content([prompt, image])
+                    result_text = response.text
                 except Exception as e:
                     result_text = f"植物辨識發生錯誤：{e}"
         
