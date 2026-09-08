@@ -11,7 +11,6 @@ st.title("🌿 大自然隨身觀察筆記")
 st.write("拍下你的植物、鳥類或岩石，讓 AI 幫你辨識並永久記錄到雲端！")
 
 # ================= 1. 讀取金鑰與連線設定 =================
-# 註：如果之後完全不用 PlantNet，也可以把 secrets 裡的 PLANTNET_API_KEY 移除
 gemini_api_key = st.secrets["GEMINI_API_KEY"]
 supabase_url = st.secrets["SUPABASE_URL"]
 supabase_key = st.secrets["SUPABASE_KEY"]
@@ -22,9 +21,9 @@ def init_supabase():
     return create_client(supabase_url, supabase_key)
 supabase = init_supabase()
 
-# 初始化 Gemini AI
+# 初始化 Gemini AI (改用錯誤訊息建議的 gemini-3.6-flash)
 genai.configure(api_key=gemini_api_key)
-model = genai.GenerativeModel('gemini-2.0-flash')
+model = genai.GenerativeModel('gemini-3.6-flash')
 
 
 # ================= 2. 上傳與辨識區塊 =================
@@ -42,7 +41,7 @@ if uploaded_file is not None:
     if st.button("🚀 開始辨識並上傳紀錄"):
         result_text = ""
         
-        # --- (A) 植物辨識 (改由 Gemini 處理) ---
+        # --- (A) 植物辨識 (Gemini 處理) ---
         if category == "植物":
             with st.spinner("Gemini AI 正在努力辨識這株植物..."):
                 try:
@@ -52,7 +51,7 @@ if uploaded_file is not None:
                 except Exception as e:
                     result_text = f"植物辨識發生錯誤：{e}"
         
-        # --- (B) 鳥類辨識 (直接交給 Gemini) ---
+        # --- (B) 鳥類辨識 ---
         elif category == "鳥類":
             with st.spinner("Gemini AI 正在努力辨識這隻鳥..."):
                 try:
@@ -62,7 +61,7 @@ if uploaded_file is not None:
                 except Exception as e:
                     result_text = f"鳥類辨識發生錯誤：{e}"
 
-        # --- (C) 岩石辨識 (直接交給 Gemini) ---
+        # --- (C) 岩石辨識 ---
         elif category == "岩石":
             with st.spinner("Gemini AI 正在努力辨識這顆岩石..."):
                 try:
