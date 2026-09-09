@@ -1,5 +1,4 @@
 import streamlit as st
-import requests
 from supabase import create_client
 import google.generativeai as genai
 from PIL import Image, ImageOps
@@ -8,7 +7,7 @@ from PIL import Image, ImageOps
 st.set_page_config(page_title="大自然隨身觀察筆記", page_icon="🌿")
 
 st.title("🌿 大自然隨身觀察筆記")
-st.write("拍下你的植物、鳥類或岩石，讓 AI 幫你辨識並永久記錄到雲端！")
+st.write("拍下你的植物、鳥類、岩石、昆蟲、兩棲爬蟲、真菌菇類、雲況或魚類，讓 AI 幫你辨識並永久記錄到雲端！")
 
 # ================= 1. 讀取金鑰與連線設定 =================
 gemini_api_key = st.secrets["GEMINI_API_KEY"]
@@ -21,13 +20,16 @@ def init_supabase():
     return create_client(supabase_url, supabase_key)
 supabase = init_supabase()
 
-# 初始化 Gemini AI (改用錯誤訊息建議的 gemini-3.6-flash)
+# 初始化 Gemini AI
 genai.configure(api_key=gemini_api_key)
 model = genai.GenerativeModel('gemini-3.6-flash')
 
 
 # ================= 2. 上傳與辨識區塊 =================
-category = st.radio("選擇你要記錄的種類：", ["植物", "鳥類", "岩石"], horizontal=True)
+# 擴充後的完整生態與自然景觀分類清單
+categories = ["植物", "鳥類", "岩石", "昆蟲", "兩棲爬蟲", "真菌菇類", "雲況", "魚類"]
+category = st.radio("選擇你要記錄的種類：", categories, horizontal=True)
+
 uploaded_file = st.file_uploader("選擇或拍攝一張大自然照片", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
@@ -41,35 +43,24 @@ if uploaded_file is not None:
     if st.button("🚀 開始辨識並上傳紀錄"):
         result_text = ""
         
-        # --- (A) 植物辨識 (Gemini 處理) ---
-        if category == "植物":
-            with st.spinner("Gemini AI 正在努力辨識這株植物..."):
-                try:
-                    prompt = "請幫我辨識這張圖片裡的是什麼植物？請給我它的中文名稱或學名，並用繁體中文簡單介紹它的特徵或用途（50字以內）。"
-                    response = model.generate_content([prompt, image])
-                    result_text = response.text
-                except Exception as e:
-                    result_text = f"植物辨識發生錯誤：{e}"
-        
-        # --- (B) 鳥類辨識 ---
-        elif category == "鳥類":
-            with st.spinner("Gemini AI 正在努力辨識這隻鳥..."):
-                try:
-                    prompt = "請幫我辨識這張圖片裡的是什麼鳥類？請給我牠的中文俗名，並用繁體中文簡單介紹一下牠的特徵（50字以內）。"
-                    response = model.generate_content([prompt, image])
-                    result_text = response.text
-                except Exception as e:
-                    result_text = f"鳥類辨識發生錯誤：{e}"
-
-        # --- (C) 岩石辨識 ---
-        elif category == "岩石":
-            with st.spinner("Gemini AI 正在努力辨識這顆岩石..."):
-                try:
-                    prompt = "請幫我辨識這張圖片裡的是什麼岩石或礦物？請給我它的中文名稱，並用繁體中文簡單介紹它的特徵（50字以內）。"
-                    response = model.generate_content([prompt, image])
-                    result_text = response.text
-                except Exception as e:
-                    result_text = f"岩石辨識發生錯誤：{e}"
+        with st.spinner(f"Gemini AI 正在努力辨識這個{category}類目標..."):
+            try:
+                # 針對不同類別給予更精準的提示詞引導
+                if category == "兩棲爬蟲":
+                    prompt = "請幫我辨識這張圖片裡的是什麼兩棲爬蟲類？請給我它的中文俗名與學名，並簡單介紹特徵，特別提醒「是否有毒或具攻擊性」（50字以內）。"
+                elif category == "真菌菇類":
+                    prompt = "請幫我辨識這張圖片裡的是什麼真菌或菇類？請給出中文名稱，並說明特徵，特別提醒「是否有毒、是否可食用」（50字以內，並附上安全警語）。"
+                elif category == "雲況":
+                    prompt = "請幫我辨識這張圖片裡的雲況或天空自然景觀？請指出這是什麼類型的雲或現象，並說明它代表接下來可能的天氣變化（50字以內）。"
+                elif category == "魚類":
+                    prompt = "請幫我辨識這張圖片裡的是什麼魚類？請給出它的中文俗名與學名（若知），並簡述其特徵與棲息環境（50字以內）。"
+                else:
+                    prompt = f"請幫我辨識這張圖片裡的是什麼{category}？請給出它的中文名稱或學名，並用繁體中文簡單介紹它的特徵或用途（50字以內）。"
+                
+                response = model.generate_content([prompt, image])
+                result_text = response.text
+            except Exception as e:
+                result_text = f"辨識發生錯誤：{e}"
 
         # ================= 3. 儲存結果至 Supabase =================
         if result_text and "錯誤" not in result_text and "失敗" not in result_text:
