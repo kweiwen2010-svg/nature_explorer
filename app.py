@@ -8,7 +8,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 st.set_page_config(page_title="大自然隨身觀察筆記", page_icon="🌿")
 
 st.title("🌿 大自然隨身觀察筆記")
-st.write("結合照片（自動抓取 GPS）與聲音辨識，打造你的全方位野外生態寶典！")
+st.write("結合照片（自動抓取 GPS）、聲音辨識與夜空星象，打造你的全方位野外生態寶典！")
 
 # ================= 1. 讀取金鑰與連線設定 =================
 gemini_api_key = st.secrets["GEMINI_API_KEY"]
@@ -74,10 +74,11 @@ st.markdown("---")
 
 # ================= 模式一：照片觀察筆記 =================
 if app_mode == "📸 照片觀察筆記":
-    categories = ["植物", "鳥類", "岩石", "昆蟲", "兩棲爬蟲", "真菌菇類", "雲況", "魚類"]
+    # 擴充加入「星象星座」
+    categories = ["植物", "鳥類", "岩石", "昆蟲", "兩棲爬蟲", "真菌菇類", "雲況", "魚類", "星象星座"]
     category = st.radio("選擇你要記錄的種類：", categories, horizontal=True)
     
-    uploaded_file = st.file_uploader("選擇或拍攝一張大自然照片", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("選擇或拍攝一張大自然或星空照片", type=["jpg", "jpeg", "png"])
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
@@ -106,7 +107,9 @@ if app_mode == "📸 照片觀察筆記":
                     elif category == "雲況":
                         prompt = "請幫我辨識這張圖片裡的雲況或天空自然景觀？請指出這是什麼類型的雲或現象，並說明它代表接下來可能的天氣變化（50字以內）。"
                     elif category == "魚類":
-                        prompt = "請幫m辨識這張圖片裡的是什麼魚類？請給出它的中文俗名與學名（若知），並簡述其特徵與棲息環境（50字以內）。"
+                        prompt = "請幫我辨識這張圖片裡的是什麼魚類？請給出它的中文俗名與學名（若知），並簡述其特徵與棲息環境（50字以內）。"
+                    elif category == "星象星座":
+                        prompt = "請幫我辨識這張夜空照片中的星座、明顯星體或星象？請給出其中文名稱與英文名，並簡單介紹其特徵或觀星小知識（50字以內）。"
                     else:
                         prompt = f"請幫我辨識這張圖片裡的是什麼{category}？請給出它的中文名稱或學名，並用繁體中文簡單介紹它的特徵或用途（50字以內）。"
                     
