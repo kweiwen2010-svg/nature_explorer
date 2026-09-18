@@ -74,7 +74,6 @@ st.markdown("---")
 
 # ================= 模式一：照片觀察筆記 =================
 if app_mode == "📸 照片觀察筆記":
-    # 擴充加入「星象星座」
     categories = ["植物", "鳥類", "岩石", "昆蟲", "兩棲爬蟲", "真菌菇類", "雲況", "魚類", "星象星座"]
     category = st.radio("選擇你要記錄的種類：", categories, horizontal=True)
     
@@ -177,25 +176,47 @@ else:
 
 st.markdown("---")
 
-# ================= 4. 歷史觀察紀錄區塊 =================
-st.header("📜 歷史觀察紀錄")
+# ================= 4. 歷史觀察紀錄與進階搜尋 =================
+st.header("📜 歷史觀察紀錄與進階搜尋")
 
+# 重新載入按鈕
 if st.button("🔄 重新載入歷史紀錄"):
     st.cache_data.clear()
 
 @st.cache_data(ttl=60)
-def load_history():
-    response = supabase.table("observations").select("*").order("id", desc=True).limit(10).execute()
+def load_all_history():
+    # 抓取最近 50 筆資料供前端快速篩選
+    response = supabase.table("observations").select("*").order("id", desc=True).limit(50).execute()
     return response.data
 
 try:
-    history_data = load_history()
+    history_data = load_all_history()
     if history_data:
-        for item in history_data:
-            st.markdown(f"**分類：** {item.get('category', '未分類')}")
-            st.markdown(f"**辨識結果：** {item.get('result_name', '無結果')}")
-            st.caption(f"記錄編號 ID: {item.get('id', 'N/A')}")
-            st.markdown("---")
+        # 進階搜尋與篩選控制項
+        col1, col2 = st.columns(2)
+        with col1:
+            filter_cat = st.selectbox("🏷️ 依分類篩選", ["全部"] + ["植物", "鳥類", "岩石", "昆蟲", "兩棲爬蟲", "真菌菇類", "雲況", "魚類", "星象星座", "聲音辨識"])
+        with col2:
+            search_query = st.text_input("🔍 關鍵字搜尋 (例如: 樹葡萄、書帶木)", "")
+
+        # 執行過濾邏輯
+        filtered_data = history_data
+        if filter_cat != "全部":
+            filtered_data = [item for item in filtered_data if item.get('category') == filter_cat]
+        if search_query:
+            filtered_data = [item for item in filtered_data if search_query.lower() in item.get('result_name', '').lower()]
+
+        st.write(f"顯示符合條件的紀錄共 **{len(filtered_data)}** 筆：")
+        st.markdown("---")
+
+        if filtered_data:
+            for item in filtered_data:
+                st.markdown(f"**分類：** {item.get('category', '未分類')}")
+                st.markdown(f"**辨識結果：** {item.get('result_name', '無結果')}")
+                st.caption(f"記錄編號 ID: {item.get('id', 'N/A')}")
+                st.markdown("---")
+        else:
+            st.info("沒有找到符合條件的觀察紀錄喔！")
     else:
         st.info("目前還沒有歷史紀錄喔！趕快記錄第一筆觀察吧！")
 except Exception as e:
