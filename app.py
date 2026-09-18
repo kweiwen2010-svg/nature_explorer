@@ -185,7 +185,6 @@ if st.button("🔄 重新載入歷史紀錄"):
 
 @st.cache_data(ttl=60)
 def load_all_history():
-    # 抓取最近 50 筆資料供前端快速篩選
     response = supabase.table("observations").select("*").order("id", desc=True).limit(50).execute()
     return response.data
 
@@ -197,9 +196,9 @@ try:
         with col1:
             filter_cat = st.selectbox("🏷️ 依分類篩選", ["全部"] + ["植物", "鳥類", "岩石", "昆蟲", "兩棲爬蟲", "真菌菇類", "雲況", "魚類", "星象星座", "聲音辨識"])
         with col2:
-            search_query = st.text_input("🔍 關鍵字搜尋 (例如: 樹葡萄、書帶木)", "")
+            search_query = st.text_input("🔍 關鍵字搜尋 (可搜名稱或座標)", "", placeholder="例如: 樹葡萄 或 23.465")
 
-        # 執行過濾邏輯
+        # 執行過濾邏輯（同時支援文字與座標搜尋）
         filtered_data = history_data
         if filter_cat != "全部":
             filtered_data = [item for item in filtered_data if item.get('category') == filter_cat]
