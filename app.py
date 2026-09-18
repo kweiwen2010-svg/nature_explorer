@@ -191,17 +191,35 @@ def load_all_history():
 try:
     history_data = load_all_history()
     if history_data:
-        # 進階搜尋與篩選控制項
-        col1, col2 = st.columns(2)
+        # 自動從現有紀錄中萃取出所有出現過的座標選項
+        existing_coords = set()
+        for item in history_data:
+            text = item.get('result_name', '')
+            if "📍 **紀錄座標：**" in text:
+                try:
+                    # 從文字中擷取座標部分
+                    coord_str = text.split("📍 **紀錄座標：**")[1].strip().split("\n")[0]
+                    existing_coords.add(coord_str)
+                except Exception:
+                    pass
+        
+        coord_options = ["全部"] + sorted(list(existing_coords))
+
+        # 三欄式篩選介面：分類、座標下拉、關鍵字
+        col1, col2, col3 = st.columns(3)
         with col1:
             filter_cat = st.selectbox("🏷️ 依分類篩選", ["全部"] + ["植物", "鳥類", "岩石", "昆蟲", "兩棲爬蟲", "真菌菇類", "雲況", "魚類", "星象星座", "聲音辨識"])
         with col2:
-            search_query = st.text_input("🔍 關鍵字搜尋 (可搜名稱或座標)", "", placeholder="例如: 樹葡萄 或 23.465")
+            filter_coord = st.selectbox("📍 依座標篩選", coord_options)
+        with col3:
+            search_query = st.text_input("🔍 關鍵字搜尋", "", placeholder="例如: 樹葡萄")
 
-        # 執行過濾邏輯（同時支援文字與座標搜尋）
+        # 執行過濾邏輯
         filtered_data = history_data
         if filter_cat != "全部":
             filtered_data = [item for item in filtered_data if item.get('category') == filter_cat]
+        if filter_coord != "全部":
+            filtered_data = [item for item in filtered_data if filter_coord in item.get('result_name', '')]
         if search_query:
             filtered_data = [item for item in filtered_data if search_query.lower() in item.get('result_name', '').lower()]
 
